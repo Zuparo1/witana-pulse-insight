@@ -1,0 +1,135 @@
+Et konkret område jeg tror jeg kan bidra med, er å styrke hvordan data, rapportering og AI kan brukes rundt Witana Pulse.
+
+Slik jeg forstår Witana, ligger mye av verdien allerede i at dere kobler tekniske systemer sammen og gjør bygg enklere å drifte over tid. Der jeg tror min kompetanse kan passe godt inn, er i å gjøre denne innsikten enda mer skalerbar, automatisert og forståelig for kundene.
+
+Et mulig konsept jeg har tenkt på er en “Pulse Insight Assistant”. Ikke som et ferdig produkt, men som et eksempel på hvordan jeg tenker:
+
+En intern eller kundeorientert løsning som kan bruke dokumentasjon, logger, driftsnotater, avvik og historiske energidata til å gi:
+
+korte oppsummeringer av teknisk dokumentasjon
+mulige avvik eller forhold som bør undersøkes
+forslag til forbedringstiltak
+automatiserte rapportutkast
+kundevennlige forklaringer av tekniske funn
+enkel visualisering av utvikling over tid
+prediksjoner for fremtidig energiforbruk basert på historiske data
+
+For eksempel kunne løsningen analysert historisk energiforbruk sammen med relevante faktorer som tid på døgnet, ukedag, sesong, temperatur eller driftsmønster, og gitt kunden en enkel forklaring som:
+
+“Basert på tidligere forbruksmønster forventes energiforbruket å øke de neste ukene. Dersom dagens drift fortsetter, kan bygget ligge over forventet nivå. Mulige tiltak er å undersøke ventilasjonsstyring, natt-/helgedrift eller temperatursettpunkt.”
+
+Poenget er ikke å erstatte fagkompetansen i Witana, men å bruke software, analyse og AI som et praktisk støtteverktøy. Det kan spare tid internt, gjøre rapportering mer effektivt, og samtidig gjøre det lettere for kunden å forstå verdien av tiltakene dere foreslår.
+
+Dette er også noe jeg synes er veldig spennende personlig, fordi det ligger midt i skjæringspunktet mellom software, IoT, sensordata, automasjon, analyse og praktisk verdiskaping.
+
+-----------------------------------------------------------------------------------------------------------------------
+Jeg ville delt det i to spor:
+
+Dokument-/rapportassistent: gjøre dokumentasjon, avvik, driftsnotater og rapportering mer effektivt.
+Prediktiv energiinnsikt: bruke historiske data til å forutsi energibruk og oppdage unormale mønstre.
+Hvordan man kunne gått frem
+
+Først ville jeg startet med en enkel prototype, ikke et stort system. Målet er å vise hvordan AI kan brukes som et støtteverktøy rundt Witana Pulse.
+
+1. Samle relevante datakilder
+
+Man trenger først å vite hvilke data som finnes. For eksempel:
+
+historisk energiforbruk, gjerne timesdata eller dagsdata
+temperaturdata ute/inne
+driftstider for ventilasjon, varme, kjøling og lys
+avvik og alarmer fra SD-anlegg/automasjonssystemer
+servicehistorikk og driftsnotater
+teknisk dokumentasjon, FDV, rapporter og kundeunderlag
+eventuelt værdata, ukedag, sesong og helligdager
+
+Poenget er at AI-en ikke bare skal “gjette”, men bruke konkret historikk og dokumentasjon som grunnlag.
+
+2. Rydde og strukturere dataen
+
+Dette er ofte det viktigste steget. Data fra bygg kan være rotete: ulike navn på sensorer, manglende målinger, forskjellige enheter og ujevne tidsintervaller.
+
+Man ville derfor laget en enkel struktur, for eksempel:
+
+Tidspunkt	Bygg	Måler	Verdi	Enhet	Temperatur	Ukedag	Driftsmodus
+2026-01-10 08:00	Bygg A	Energi total	142	kWh	-4	Mandag	Normal drift
+
+Når dataen er strukturert, kan man begynne å analysere den.
+
+3. Lage en enkel energimodell først
+
+Jeg ville ikke startet med en veldig avansert AI-modell. Jeg ville startet med en enkel baseline:
+
+“Hva pleier energiforbruket å være på en mandag i januar med omtrent denne temperaturen?”
+
+Så kan man sammenligne faktisk forbruk med forventet forbruk.
+
+Eksempel:
+
+Bygget bruker normalt 120–135 kWh mellom 08:00 og 12:00 ved tilsvarende temperatur og drift. I dag brukte bygget 168 kWh. Dette er 24–40 % over forventet nivå.
+
+Deretter kan man bygge videre med mer avanserte modeller, for eksempel:
+
+regresjonsmodell
+Random Forest / XGBoost
+tidsseriemodell
+nevralt nettverk hvis de har mye data
+kombinasjon av værdata, driftstid og historisk forbruk
+
+Men det viktigste er ikke modellen i seg selv. Det viktigste er at kunden får en forståelig forklaring.
+
+4. Bruke AI til forklaring, ikke bare prediksjon
+
+Selve prediksjonen kan gjøres av en vanlig analysemodell. AI/LLM kan brukes rundt modellen til å forklare resultatet.
+
+Eksempel på output:
+
+Basert på historiske data forventes energiforbruket neste uke å ligge noe høyere enn normalt, hovedsakelig på grunn av lavere utetemperatur. Dersom bygget fortsetter med samme driftsmønster som siste 14 dager, er det estimert et merforbruk på ca. 8–12 %. Det anbefales å undersøke nattdrift på ventilasjon og temperatursettpunkt utenfor åpningstid.
+
+Det er her verdien ligger: Ikke bare en graf, men en forklaring som en driftsleder eller kunde faktisk kan bruke.
+
+5. Automatisere rapporter
+
+Dette tror jeg er et veldig godt poeng å nevne til Witana.
+
+I stedet for at noen manuelt må skrive månedsrapport, kunne systemet automatisk lage et rapportutkast:
+
+Månedsrapport for bygg X
+
+energiforbruk denne måneden
+sammenligning med forrige måned
+sammenligning med forventet forbruk
+største avvik
+mulige årsaker
+anbefalte tiltak
+kort kundevennlig oppsummering
+teknisk detaljgrunnlag for Witana internt
+
+Da kan Witana spare tid, samtidig som kunden opplever mer verdi.
+
+Hvor NotebookLM passer inn
+
+NotebookLM er relevant, men mest som prototype- og arbeidsverktøy, ikke nødvendigvis som selve produksjonssystemet.
+
+NotebookLM er laget for å analysere kilder man laster opp, for eksempel PDF-er, Google Docs, Google Slides og nettsider, og bruke disse kildene som grunnlag for svar og oppsummeringer. Google beskriver det som et AI-verktøy for å analysere kilder og gjøre komplekst innhold mer forståelig.
+
+For Witana kunne NotebookLM brukes til å teste ideen raskt:
+
+laste opp FDV-dokumentasjon
+legge inn servicehistorikk
+legge inn rapporter
+legge inn tekniske beskrivelser
+stille spørsmål som:
+“Hva er de viktigste avvikene?”
+“Hva bør kunden få forklart?”
+“Lag en kort rapport for ikke-tekniske beslutningstakere.”
+
+Det kule med NotebookLM er at det kan gi en rask demonstrasjon av hvordan en dokumentassistent kan fungere. Google har også en Enterprise-versjon som er mer rettet mot organisasjoner og komplekse dokumentbaser.
+
+Men jeg ville vært tydelig på begrensningen:
+
+NotebookLM kan være et godt verktøy for å teste og demonstrere konseptet raskt, spesielt for dokumentanalyse og rapportutkast. Men en mer integrert løsning for Witana Pulse ville trolig måtte bygges med egne datakoblinger, database, API-er, tilgangsstyring og modellkontroll.
+
+Det er en moden måte å si det på. Du viser at du kjenner verktøyet, men at du også skjønner forskjellen på demo og produksjon.
+
+NotebookLM Enterprise har også dokumenterte API-er for å opprette og administrere notebooks og datakilder, men dette er mer relevant hvis man faktisk skal vurdere Google Cloud/Enterprise som plattform

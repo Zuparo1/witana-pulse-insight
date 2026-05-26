@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Witana Pulse Insight Assistant</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+    header { background: #1a1f2e; border-bottom: 1px solid #2d3748; padding: 16px 32px; display: flex; align-items: center; gap: 16px; }
+    .logo { font-size: 22px; font-weight: 700; color: #63b3ed; letter-spacing: -0.5px; }
+    .logo span { color: #48bb78; }
+    .tagline { color: #718096; font-size: 13px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #48bb78; margin-left: auto; box-shadow: 0 0 8px #48bb78; }
+
+    nav { display: flex; background: #1a1f2e; border-bottom: 1px solid #2d3748; padding: 0 32px; }
+    nav button { background: none; border: none; color: #718096; padding: 14px 20px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    nav button.active { color: #63b3ed; border-bottom-color: #63b3ed; }
+    nav button:hover { color: #a0aec0; }
+
+    main { padding: 32px; max-width: 1200px; margin: 0 auto; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+    .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; padding: 20px; }
+    .card h3 { font-size: 13px; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .card .value { font-size: 32px; font-weight: 700; color: #e2e8f0; }
+    .card .sub { font-size: 13px; color: #718096; margin-top: 4px; }
+    .card .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-top: 6px; }
+    .badge.red { background: rgba(245,101,101,0.15); color: #fc8181; }
+    .badge.green { background: rgba(72,187,120,0.15); color: #68d391; }
+    .badge.yellow { background: rgba(236,201,75,0.15); color: #f6e05e; }
+
+    .chart-card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; padding: 20px; margin-top: 20px; }
+    .chart-card h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #e2e8f0; }
+
+    .anomaly-list { margin-top: 20px; }
+    .anomaly-item { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 8px; padding: 16px; margin-bottom: 12px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
+    .anomaly-item .meta { font-size: 13px; color: #718096; margin-top: 4px; }
+    .anomaly-item .deviation { font-size: 20px; font-weight: 700; color: #fc8181; text-align: right; }
+    .anomaly-item .deviation .unit { font-size: 12px; font-weight: 400; display: block; color: #718096; }
+    .analyze-btn { background: #2b6cb0; color: white; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px; margin-top: 10px; transition: background 0.2s; }
+    .analyze-btn:hover { background: #3182ce; }
+    .analyze-btn:disabled { background: #2d3748; color: #718096; cursor: not-allowed; }
+
+    .ai-result { background: #1a2744; border: 1px solid #2c5282; border-radius: 8px; padding: 16px; margin-top: 12px; font-size: 14px; line-height: 1.7; color: #bee3f8; display: none; }
+    .ai-result.visible { display: block; }
+    .ai-label { font-size: 11px; font-weight: 700; color: #63b3ed; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .ai-label::before { content: '◆'; font-size: 10px; }
+
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #4a5568; border-top-color: #63b3ed; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Document Assistant */
+    .doc-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; height: calc(100vh - 200px); }
+    .doc-panel { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+    .doc-panel h2 { padding: 16px 20px; font-size: 15px; border-bottom: 1px solid #2d3748; color: #a0aec0; }
+    .doc-textarea { flex: 1; background: #111827; border: none; color: #a0aec0; padding: 16px; resize: none; font-family: 'Courier New', monospace; font-size: 13px; outline: none; line-height: 1.6; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .msg { padding: 12px 14px; border-radius: 8px; font-size: 14px; line-height: 1.6; max-width: 90%; }
+    .msg.user { background: #2d3748; align-self: flex-end; color: #e2e8f0; }
+    .msg.ai { background: #1a2744; border: 1px solid #2c5282; color: #bee3f8; align-self: flex-start; }
+    .msg.system { background: #1a2322; border: 1px solid #276749; color: #9ae6b4; align-self: center; font-size: 12px; }
+    .chat-input-row { padding: 12px 16px; border-top: 1px solid #2d3748; display: flex; gap: 8px; }
+    .chat-input { flex: 1; background: #111827; border: 1px solid #2d3748; border-radius: 6px; color: #e2e8f0; padding: 10px 14px; font-size: 14px; outline: none; }
+    .chat-input:focus { border-color: #4a90d9; }
+    .send-btn { background: #2b6cb0; color: white; border: none; border-radius: 6px; padding: 10px 18px; cursor: pointer; font-size: 14px; }
+    .send-btn:hover { background: #3182ce; }
+    .reset-btn { background: #2d3748; color: #a0aec0; border: none; border-radius: 6px; padding: 10px 14px; cursor: pointer; font-size: 14px; }
+
+    /* Report */
+    .report-container { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; padding: 24px; margin-top: 20px; }
+    .report-container pre { font-family: inherit; white-space: pre-wrap; line-height: 1.8; font-size: 14px; color: #cbd5e0; }
+    .gen-btn { background: #276749; color: white; border: none; border-radius: 8px; padding: 12px 24px; cursor: pointer; font-size: 15px; font-weight: 600; transition: background 0.2s; }
+    .gen-btn:hover { background: #2f855a; }
+    .gen-btn:disabled { background: #2d3748; color: #718096; cursor: not-allowed; }
+    .predict-btn { background: #553c9a; color: white; border: none; border-radius: 8px; padding: 12px 24px; cursor: pointer; font-size: 15px; font-weight: 600; transition: background 0.2s; margin-left: 12px; }
+    .predict-btn:hover { background: #6b46c1; }
+    .predict-btn:disabled { background: #2d3748; color: #718096; cursor: not-allowed; }
+
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .section-title { font-size: 20px; font-weight: 700; color: #e2e8f0; }
+    .building-badge { background: #2d3748; padding: 6px 14px; border-radius: 20px; font-size: 13px; color: #a0aec0; }
+
+    .placeholder { color: #4a5568; font-size: 14px; text-align: center; padding: 40px; }
+
+    .quick-questions { padding: 8px 16px 12px; border-top: 1px solid #1a1f2e; }
+    .quick-questions p { font-size: 11px; color: #4a5568; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .quick-q { background: #2d3748; border: none; color: #a0aec0; padding: 5px 10px; border-radius: 12px; font-size: 12px; cursor: pointer; margin-right: 6px; margin-bottom: 6px; }
+    .quick-q:hover { background: #4a5568; color: #e2e8f0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">Witana <span>Pulse</span> Insight</div>
+    <div class="tagline">AI-støtteverktøy for energianalyse og bygningsdrift</div>
+  </div>
+  <div class="status-dot" title="System aktiv"></div>
+</header>
+
+<nav>
+  <button class="active" onclick="switchTab('energy')">Energioversikt</button>
+  <button onclick="switchTab('anomalies')">Avviksanalyse</button>
+  <button onclick="switchTab('report')">Rapportgenerator</button>
+  <button onclick="switchTab('docs')">Dokumentassistent</button>
+</nav>
+
+<main>
+
+  <!-- TAB: ENERGY OVERVIEW -->
+  <div id="tab-energy" class="tab-panel active">
+    <div class="section-header">
+      <div class="section-title">Energioversikt — Mai 2026</div>
+      <div class="building-badge">Bygg A — Kontorbygg Hamar</div>
+    </div>
+    <div class="grid-3" id="kpi-cards">
+      <div class="card"><h3>Totalt forbruk</h3><div class="value" id="kpi-total">—</div><div class="sub">kWh denne måneden</div></div>
+      <div class="card"><h3>Avvik fra forventet</h3><div class="value" id="kpi-deviation">—</div><div class="sub" id="kpi-deviation-sub">gjennomsnitt</div></div>
+      <div class="card"><h3>Dager med avvik</h3><div class="value" id="kpi-anomaly-days">—</div><div class="sub">dager over 15% avvik</div></div>
+    </div>
+    <div class="chart-card">
+      <h2>Daglig energiforbruk vs. forventet (kWh)</h2>
+      <canvas id="energyChart" height="90"></canvas>
+    </div>
+    <div class="chart-card" style="margin-top:20px">
+      <h2>Avviksprosent per dag (%)</h2>
+      <canvas id="deviationChart" height="70"></canvas>
+    </div>
+  </div>
+
+  <!-- TAB: ANOMALY ANALYSIS -->
+  <div id="tab-anomalies" class="tab-panel">
+    <div class="section-header">
+      <div class="section-title">Avviksanalyse</div>
+      <div class="building-badge">Bygg A — Kontorbygg Hamar</div>
+    </div>
+    <p style="color:#718096;font-size:14px;margin-bottom:20px">Dager med >15% avvik fra forventet energiforbruk. Klikk «Analyser» for AI-forklaring.</p>
+    <div class="anomaly-list" id="anomaly-list">
+      <div class="placeholder">Laster...</div>
+    </div>
+  </div>
+
+  <!-- TAB: REPORT GENERATOR -->
+  <div id="tab-report" class="tab-panel">
+    <div class="section-header">
+      <div class="section-title">Rapportgenerator</div>
+      <div class="building-badge">Bygg A — Kontorbygg Hamar</div>
+    </div>
+    <p style="color:#718096;font-size:14px;margin-bottom:20px">
+      Generer automatiserte rapportutkast og energiprediksjoner basert på historiske data.
+    </p>
+    <button class="gen-btn" id="report-btn" onclick="generateReport()">
+      Generer månedsrapport — Mai 2026
+    </button>
+    <button class="predict-btn" id="predict-btn" onclick="generatePrediction()">
+      Forutsi neste uke
+    </button>
+    <div class="report-container" id="report-output" style="display:none">
+      <div class="ai-label">AI-generert rapportutkast</div>
+      <pre id="report-text"></pre>
+    </div>
+  </div>
+
+  <!-- TAB: DOCUMENT ASSISTANT -->
+  <div id="tab-docs" class="tab-panel">
+    <div class="section-header">
+      <div class="section-title">Dokumentassistent</div>
+    </div>
+    <div class="doc-layout">
+      <div class="doc-panel">
+        <h2>Lim inn dokument (FDV, driftsnotat, rapport...)</h2>
+        <textarea class="doc-textarea" id="doc-text" placeholder="Lim inn teknisk dokumentasjon, FDV-dokumenter, driftsnotater, avviksmeldinger eller rapporter her...
+
+Eksempel:
+Driftsnotat Bygg A — 2026-05-15
+Ventilasjonsanlegg VVS-1: Registrert høy støy fra aggregat. Temperatur på tilluft: 24°C (settpunkt 21°C). Filtervakt utløst.
+Anbefaling: Kontroller filter og gjennomfør service på aggregat innen 14 dager."></textarea>
+      </div>
+      <div class="doc-panel">
+        <h2>Still spørsmål om dokumentet</h2>
+        <div class="chat-messages" id="chat-messages">
+          <div class="msg system">Lim inn et dokument til venstre, og still spørsmål her.</div>
+        </div>
+        <div class="quick-questions">
+          <p>Hurtigspørsmål</p>
+          <button class="quick-q" onclick="quickQuestion('Hva er de viktigste avvikene?')">Viktigste avvik?</button>
+          <button class="quick-q" onclick="quickQuestion('Lag en kort kundevennlig oppsummering')">Kundevennlig oppsummering</button>
+          <button class="quick-q" onclick="quickQuestion('Hva bør undersøkes først?')">Hva bør undersøkes?</button>
+          <button class="quick-q" onclick="quickQuestion('Hvilke tiltak anbefales?')">Anbefalte tiltak?</button>
+        </div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chat-input" type="text" placeholder="Skriv spørsmål..." onkeydown="if(event.key==='Enter')sendMessage()">
+          <button class="reset-btn" onclick="resetChat()" title="Ny samtale">↺</button>
+          <button class="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+let dailyData = [];
+let anomalyData = [];
+let chatHistory = [];
+
+// Tab switching
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Load energy data
+async function loadData() {
+  const resp = await fetch('/api/energy/daily');
+  dailyData = await resp.json();
+  renderKPIs();
+  renderCharts();
+  loadAnomalies();
+}
+
+function renderKPIs() {
+  const total = dailyData.reduce((s, d) => s + d.total_kwh, 0);
+  const expected = dailyData.reduce((s, d) => s + d.expected_kwh, 0);
+  const devPct = ((total - expected) / expected * 100).toFixed(1);
+  const anomalyDays = dailyData.filter(d => d.deviation_pct > 15).length;
+
+  document.getElementById('kpi-total').textContent = total.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  document.getElementById('kpi-deviation').innerHTML = `<span style="color:${devPct > 0 ? '#fc8181' : '#68d391'}">${devPct > 0 ? '+' : ''}${devPct}%</span>`;
+  document.getElementById('kpi-anomaly-days').innerHTML = `<span style="color:${anomalyDays > 3 ? '#fc8181' : '#f6e05e'}">${anomalyDays}</span>`;
+}
+
+function renderCharts() {
+  const labels = dailyData.map(d => d.date.slice(5)); // MM-DD
+  const actual = dailyData.map(d => d.total_kwh);
+  const expected = dailyData.map(d => d.expected_kwh);
+  const deviation = dailyData.map(d => d.deviation_pct);
+
+  const chartDefaults = {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#a0aec0', font: { size: 12 } } } },
+    scales: {
+      x: { ticks: { color: '#718096', maxTicksLimit: 10 }, grid: { color: '#1e2533' } },
+      y: { ticks: { color: '#718096' }, grid: { color: '#1e2533' } }
+    }
+  };
+
+  new Chart(document.getElementById('energyChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Faktisk forbruk', data: actual, borderColor: '#63b3ed', backgroundColor: 'rgba(99,179,237,0.08)', tension: 0.3, fill: true, pointRadius: 3 },
+        { label: 'Forventet forbruk', data: expected, borderColor: '#68d391', borderDash: [5, 4], tension: 0.3, pointRadius: 2 }
+      ]
+    },
+    options: chartDefaults
+  });
+
+  new Chart(document.getElementById('deviationChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Avvik (%)',
+        data: deviation,
+        backgroundColor: deviation.map(v => v > 20 ? 'rgba(245,101,101,0.7)' : v > 10 ? 'rgba(236,201,75,0.6)' : 'rgba(72,187,120,0.5)'),
+        borderRadius: 3,
+      }]
+    },
+    options: { ...chartDefaults, plugins: { legend: { display: false } } }
+  });
+}
+
+async function loadAnomalies() {
+  const resp = await fetch('/api/energy/anomalies');
+  anomalyData = await resp.json();
+  const container = document.getElementById('anomaly-list');
+
+  if (anomalyData.length === 0) {
+    container.innerHTML = '<div class="placeholder">Ingen signifikante avvik funnet.</div>';
+    return;
+  }
+
+  container.innerHTML = anomalyData.map(d => `
+    <div class="anomaly-item" id="anomaly-${d.date}">
+      <div>
+        <strong style="color:#e2e8f0">${d.date}</strong> — ${d.weekday}
+        <div class="meta">${d.total_kwh} kWh faktisk / ${d.expected_kwh} kWh forventet · ${d.avg_temp}°C ute · ${d.anomaly_hours} avvikstimer</div>
+        ${d.anomalies.length ? `<div class="meta" style="color:#fc8181;margin-top:4px">⚠ ${d.anomalies.join('; ')}</div>` : ''}
+        <button class="analyze-btn" id="btn-${d.date}" onclick="analyzeAnomaly('${d.date}')">
+          Analyser med AI
+        </button>
+        <div class="ai-result" id="result-${d.date}">
+          <div class="ai-label">Pulse Insight Analyse</div>
+          <span id="text-${d.date}"></span>
+        </div>
+      </div>
+      <div class="deviation">
+        +${d.deviation_pct}%
+        <span class="unit">over forventet</span>
+        <span class="badge red">${d.deviation_pct > 30 ? 'Kritisk' : 'Avvik'}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function analyzeAnomaly(date) {
+  const btn = document.getElementById('btn-' + date);
+  const result = document.getElementById('result-' + date);
+  const text = document.getElementById('text-' + date);
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analyserer...';
+  result.classList.add('visible');
+  text.textContent = 'Henter AI-analyse...';
+
+  try {
+    const resp = await fetch('/api/analyze-anomaly', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date })
+    });
+    const data = await resp.json();
+    text.textContent = data.analysis || data.error;
+    btn.textContent = 'Analysert ✓';
+  } catch (e) {
+    text.textContent = 'Feil: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Prøv igjen';
+  }
+}
+
+async function generateReport() {
+  const btn = document.getElementById('report-btn');
+  const output = document.getElementById('report-output');
+  const text = document.getElementById('report-text');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Genererer rapport...';
+  output.style.display = 'block';
+  text.textContent = 'Genererer AI-rapport...';
+
+  try {
+    const resp = await fetch('/api/monthly-report', { method: 'POST' });
+    const data = await resp.json();
+    text.textContent = data.report || data.error;
+    btn.textContent = 'Rapport generert ✓';
+  } catch (e) {
+    text.textContent = 'Feil: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Generer månedsrapport — Mai 2026';
+  }
+}
+
+async function generatePrediction() {
+  const btn = document.getElementById('predict-btn');
+  const output = document.getElementById('report-output');
+  const text = document.getElementById('report-text');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analyserer trend...';
+  output.style.display = 'block';
+  text.textContent = 'Genererer prediksjon...';
+
+  try {
+    const resp = await fetch('/api/predict', { method: 'POST' });
+    const data = await resp.json();
+    text.textContent = data.prediction || data.error;
+    btn.textContent = 'Prediksjon generert ✓';
+  } catch (e) {
+    text.textContent = 'Feil: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Forutsi neste uke';
+  }
+}
+
+function appendMessage(role, text) {
+  const messages = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.textContent = text;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+  return div;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const docText = document.getElementById('doc-text').value.trim();
+  const question = input.value.trim();
+
+  if (!question) return;
+  if (!docText) {
+    appendMessage('system', '⚠ Lim inn et dokument til venstre først.');
+    return;
+  }
+
+  input.value = '';
+  appendMessage('user', question);
+  const thinking = appendMessage('ai', '...');
+
+  try {
+    const resp = await fetch('/api/document-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ document: docText, question })
+    });
+    const data = await resp.json();
+    thinking.textContent = data.answer || data.error;
+  } catch (e) {
+    thinking.textContent = 'Feil: ' + e.message;
+  }
+}
+
+function quickQuestion(q) {
+  document.getElementById('chat-input').value = q;
+  sendMessage();
+}
+
+async function resetChat() {
+  await fetch('/api/document-chat/reset', { method: 'POST' });
+  const messages = document.getElementById('chat-messages');
+  messages.innerHTML = '<div class="msg system">Samtalen er tilbakestilt.</div>';
+}
+
+loadData();
+</script>
+</body>
+</html>
